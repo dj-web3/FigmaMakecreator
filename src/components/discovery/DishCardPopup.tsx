@@ -90,7 +90,7 @@ export function DishCardPopup({
             <div className="flex items-center gap-1.5 text-[10px]">
               <TrendingUp className="size-3 text-[#FE5D4D]" />
               <span className="font-semibold text-[#4a1710]">
-                {dish.demand}% demand
+                {dish.demand} orders
               </span>
             </div>
           </div>
@@ -167,7 +167,7 @@ export function DishCardPopup({
                         </p>
                         <div className="flex items-center gap-2.5 mt-1">
                           <span className="text-[10px] text-gray-500">
-                            {availableDish.demand}% demand
+                            {availableDish.demand} orders
                           </span>
                           <span className="text-[10px] text-[#FE5D4D] font-semibold">
                             ${availableDish.unitMargin.toFixed(2)} margin

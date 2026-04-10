@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Task } from '../views/CreatePlanView';
 import { ClockTaskCard } from './ClockTaskCard';
 
@@ -6,207 +6,260 @@ interface ClockViewProps {
   tasks: Task[];
 }
 
+const CHEF_COLORS = {
+  sous: '#22c55e',
+  station: '#f59e0b',
+  junior: '#ef4444',
+  trainee: '#a855f7',
+};
+
+const CHEF_LABELS: Record<string, string> = {
+  sous: 'SOUS CHEF',
+  station: 'STATION CHEF',
+  junior: 'JUNIOR CHEF',
+  trainee: 'TRAINEE CHEF',
+};
+
+// 7 AM → 7 PM range = 12 hours = 720 minutes
+const DAY_START_HOUR = 7;
+const DAY_END_HOUR = 19;
+const DAY_HOURS = DAY_END_HOUR - DAY_START_HOUR; // 12 hours
+
+function timeToMinutes(timeStr: string): number {
+  const [h, m] = timeStr.split(':').map(Number);
+  return h * 60 + m;
+}
+
 export function ClockView({ tasks }: ClockViewProps) {
   const [clockMode, setClockMode] = useState<'1hour' | '12hour'>('12hour');
   const [hoveredTask, setHoveredTask] = useState<Task | null>(null);
   const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
+
+  // Focus hour for 1-hour view (7–18, so last hour starts at 18 = 6 PM)
   const [focusHour, setFocusHour] = useState(10);
+  const sliderRef = useRef<HTMLInputElement>(null);
 
-  const hours12 = Array.from({ length: 12 }, (_, i) => i + 1);
-  const minuteMarkers = Array.from({ length: 12 }, (_, i) => i * 5);
+  const CX = 300;
+  const CY = 300;
+  const BASE_R = 80;
+  const RING_W = 40;
+  const MAX_R = BASE_R + 4 * RING_W;
 
-  // Calculate angle for time position (12 o'clock = 0°)
-  const getTimeAngle = (hour: number, minute: number = 0) => {
-    const hourAngle = ((hour % 12) * 30 + minute * 0.5) - 90;
-    return hourAngle;
+  // ── 12h face: hours 1-12 at standard positions ──────────────────
+  const getAngle12 = (hour: number, minute = 0) =>
+    ((hour % 12) * 30 + minute * 0.5) - 90;
+
+  // ── 1h face: 60 minutes around the full circle, 6° per minute ──
+  // minute 0 = top (−90°), minute 30 = bottom
+  const getAngle1h = (minute: number) => minute * 6 - 90;
+
+  // ── Task arc helpers ────────────────────────────────────────────
+  const arcPath = (
+    innerR: number,
+    outerR: number,
+    startDeg: number,
+    sweepDeg: number
+  ) => {
+    const toRad = (d: number) => (d * Math.PI) / 180;
+    const s = toRad(startDeg);
+    const e = toRad(startDeg + sweepDeg);
+    const large = sweepDeg > 180 ? 1 : 0;
+    const x1 = CX + innerR * Math.cos(s);
+    const y1 = CY + innerR * Math.sin(s);
+    const x2 = CX + outerR * Math.cos(s);
+    const y2 = CY + outerR * Math.sin(s);
+    const x3 = CX + outerR * Math.cos(e);
+    const y3 = CY + outerR * Math.sin(e);
+    const x4 = CX + innerR * Math.cos(e);
+    const y4 = CY + innerR * Math.sin(e);
+    return [
+      `M ${x1} ${y1}`,
+      `L ${x2} ${y2}`,
+      `A ${outerR} ${outerR} 0 ${large} 1 ${x3} ${y3}`,
+      `L ${x4} ${y4}`,
+      `A ${innerR} ${innerR} 0 ${large} 0 ${x1} ${y1}`,
+      'Z',
+    ].join(' ');
   };
 
-  const getCurrentTime = () => {
-    const now = new Date();
-    return `${now.getHours() % 12 || 12}:${String(now.getMinutes()).padStart(2, '0')} ${now.getHours() >= 12 ? 'PM' : 'AM'}`;
-  };
+  // ── Render 12-hour face ─────────────────────────────────────────
+  const render12h = () => (
+    <>
+      {/* Grid rings */}
+      {[0, 1, 2, 3].map(i => (
+        <circle key={i} cx={CX} cy={CY} r={BASE_R + i * RING_W} fill="none" stroke="#f3f4f6" strokeWidth="1" />
+      ))}
 
-  // Parse task time to get angle and duration
-  const getTaskSegment = (task: Task, ringIndex: number) => {
-    const [time] = task.startTime.split(' ');
-    const [hours, minutes] = time.split(':').map(Number);
-    const startAngle = getTimeAngle(hours, minutes);
-    const durationAngle = (task.duration / 60) * 30; // 30° per hour
-    
-    return {
-      startAngle,
-      sweepAngle: durationAngle,
-      ringIndex
-    };
-  };
+      {/* Hour labels */}
+      {Array.from({ length: 12 }, (_, i) => i + 1).map(h => {
+        const ang = getAngle12(h);
+        const r = MAX_R + 34;
+        const x = CX + r * Math.cos((ang * Math.PI) / 180);
+        const y = CY + r * Math.sin((ang * Math.PI) / 180);
+        return (
+          <text key={h} x={x} y={y} textAnchor="middle" dominantBaseline="middle" fontSize="13" fontWeight="600" fill="#6b7280">
+            {h}
+          </text>
+        );
+      })}
 
-  const taskSegmentColors = {
-    sous: '#4ade80',
-    station: '#fde047', 
-    junior: '#fb7185',
-    trainee: '#c084fc'
-  };
+      {/* Minute tick marks */}
+      {Array.from({ length: 60 }, (_, m) => {
+        const ang = getAngle12(0, m);
+        const isMajor = m % 5 === 0;
+        const r1 = MAX_R + (isMajor ? 8 : 4);
+        const r2 = MAX_R + (isMajor ? 16 : 8);
+        const rad = (ang * Math.PI) / 180;
+        return (
+          <line
+            key={m}
+            x1={CX + r1 * Math.cos(rad)} y1={CY + r1 * Math.sin(rad)}
+            x2={CX + r2 * Math.cos(rad)} y2={CY + r2 * Math.sin(rad)}
+            stroke={isMajor ? '#d1d5db' : '#e5e7eb'} strokeWidth={isMajor ? 2 : 1}
+          />
+        );
+      })}
 
-  const renderClockFace = () => {
-    const centerX = 300;
-    const centerY = 300;
-    const baseRadius = 80;
-    const ringWidth = 40;
-    const maxRadius = baseRadius + (4 * ringWidth);
+      {/* Task arcs */}
+      {tasks.map(task => {
+        const [h, m] = task.startTime.split(':').map(Number);
+        const startAng = getAngle12(h, m);
+        const sweepAng = (task.duration / 60) * 30;
+        const ringIdx = ['sous', 'station', 'junior', 'trainee'].indexOf(task.chefRole);
+        if (ringIdx < 0) return null;
+        const innerR = BASE_R + ringIdx * RING_W + 2;
+        const outerR = innerR + RING_W - 6;
+        return (
+          <path
+            key={task.id}
+            d={arcPath(innerR, outerR, startAng, sweepAng)}
+            fill={CHEF_COLORS[task.chefRole as keyof typeof CHEF_COLORS]}
+            opacity="0.88"
+            className="cursor-pointer hover:opacity-100 transition-opacity"
+            onMouseEnter={e => {
+              setHoveredTask(task);
+              const r = e.currentTarget.getBoundingClientRect();
+              setHoverPosition({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
+            }}
+            onMouseLeave={() => setHoveredTask(null)}
+          />
+        );
+      })}
+
+      {/* Center */}
+      <circle cx={CX} cy={CY} r={BASE_R - 5} fill="white" stroke="#e5e7eb" strokeWidth="2" />
+    </>
+  );
+
+  // ── Render 1-hour face ──────────────────────────────────────────
+  const render1h = () => {
+    const focusStartMin = focusHour * 60;
+    const focusEndMin = focusStartMin + 60;
+
+    // Filter tasks that overlap the focus window
+    const visible = tasks.filter(t => {
+      const start = timeToMinutes(t.startTime);
+      const end = start + t.duration;
+      return start < focusEndMin && end > focusStartMin;
+    });
 
     return (
-      <svg width="600" height="600" viewBox="0 0 600 600" className="mx-auto">
-        {/* Background circles */}
-        <circle cx={centerX} cy={centerY} r={maxRadius + 20} fill="#fff8f7" opacity="0.2" />
-        <circle cx={centerX} cy={centerY} r={maxRadius} fill="#ffffff" opacity="0.5" />
-        
-        {/* Hour markers and labels */}
-        {hours12.map((hour) => {
-          const angle = getTimeAngle(hour);
-          const labelRadius = maxRadius + 35;
-          const x = centerX + labelRadius * Math.cos((angle * Math.PI) / 180);
-          const y = centerY + labelRadius * Math.sin((angle * Math.PI) / 180);
-          
+      <>
+        {/* Grid rings */}
+        {[0, 1, 2, 3].map(i => (
+          <circle key={i} cx={CX} cy={CY} r={BASE_R + i * RING_W} fill="none" stroke="#f3f4f6" strokeWidth="1" />
+        ))}
+
+        {/* Minute labels: 0, 5, 10 … 55 */}
+        {Array.from({ length: 12 }, (_, i) => i * 5).map(min => {
+          const ang = getAngle1h(min);
+          const r = MAX_R + 28;
+          const x = CX + r * Math.cos((ang * Math.PI) / 180);
+          const y = CY + r * Math.sin((ang * Math.PI) / 180);
           return (
-            <g key={hour}>
-              <text
-                x={x}
-                y={y}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                className="text-sm font-semibold fill-gray-500"
-              >
-                {hour}
-              </text>
-            </g>
+            <text key={min} x={x} y={y} textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight="600" fill="#6b7280">
+              {min}
+            </text>
           );
         })}
 
-        {/* Minute markers */}
-        {minuteMarkers.map((minute) => {
-          const angle = getTimeAngle(0, minute);
-          const innerRadius = maxRadius + 10;
-          const outerRadius = maxRadius + 15;
-          const x1 = centerX + innerRadius * Math.cos((angle * Math.PI) / 180);
-          const y1 = centerY + innerRadius * Math.sin((angle * Math.PI) / 180);
-          const x2 = centerX + outerRadius * Math.cos((angle * Math.PI) / 180);
-          const y2 = centerY + outerRadius * Math.sin((angle * Math.PI) / 180);
-          
+        {/* Minor tick marks every 1 minute */}
+        {Array.from({ length: 60 }, (_, m) => {
+          const ang = getAngle1h(m);
+          const isMajor = m % 5 === 0;
+          const r1 = MAX_R + (isMajor ? 8 : 4);
+          const r2 = MAX_R + (isMajor ? 16 : 8);
+          const rad = (ang * Math.PI) / 180;
           return (
             <line
-              key={minute}
-              x1={x1}
-              y1={y1}
-              x2={x2}
-              y2={y2}
-              stroke="#e5e7eb"
-              strokeWidth="2"
+              key={m}
+              x1={CX + r1 * Math.cos(rad)} y1={CY + r1 * Math.sin(rad)}
+              x2={CX + r2 * Math.cos(rad)} y2={CY + r2 * Math.sin(rad)}
+              stroke={isMajor ? '#d1d5db' : '#e5e7eb'} strokeWidth={isMajor ? 2 : 1}
             />
           );
         })}
 
-        {/* Concentric rings */}
-        {[0, 1, 2, 3].map((ringIndex) => {
-          const radius = baseRadius + (ringIndex * ringWidth);
-          return (
-            <circle
-              key={ringIndex}
-              cx={centerX}
-              cy={centerY}
-              r={radius}
-              fill="none"
-              stroke="#f3f4f6"
-              strokeWidth="1"
-            />
-          );
-        })}
-
-        {/* Task segments */}
-        {tasks.map((task, index) => {
-          const ringIndex = ['sous', 'station', 'junior', 'trainee'].indexOf(task.chefRole);
-          const { startAngle, sweepAngle } = getTaskSegment(task, ringIndex);
-          const innerRadius = baseRadius + (ringIndex * ringWidth);
-          const outerRadius = innerRadius + ringWidth - 4;
-          
-          const startRad = (startAngle * Math.PI) / 180;
-          const endRad = ((startAngle + sweepAngle) * Math.PI) / 180;
-          
-          const x1 = centerX + innerRadius * Math.cos(startRad);
-          const y1 = centerY + innerRadius * Math.sin(startRad);
-          const x2 = centerX + outerRadius * Math.cos(startRad);
-          const y2 = centerY + outerRadius * Math.sin(startRad);
-          const x3 = centerX + outerRadius * Math.cos(endRad);
-          const y3 = centerY + outerRadius * Math.sin(endRad);
-          const x4 = centerX + innerRadius * Math.cos(endRad);
-          const y4 = centerY + innerRadius * Math.sin(endRad);
-          
-          const largeArc = sweepAngle > 180 ? 1 : 0;
-          
-          const pathData = [
-            `M ${x1} ${y1}`,
-            `L ${x2} ${y2}`,
-            `A ${outerRadius} ${outerRadius} 0 ${largeArc} 1 ${x3} ${y3}`,
-            `L ${x4} ${y4}`,
-            `A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${x1} ${y1}`,
-            'Z'
-          ].join(' ');
-
+        {/* Task arcs (mapped to minutes within the focus hour) */}
+        {visible.map(task => {
+          const taskStart = timeToMinutes(task.startTime);
+          const clampedStart = Math.max(taskStart, focusStartMin) - focusStartMin;
+          const clampedEnd = Math.min(taskStart + task.duration, focusEndMin) - focusStartMin;
+          const startAng = getAngle1h(clampedStart);
+          const sweepAng = (clampedEnd - clampedStart) * 6; // 6° per minute
+          const ringIdx = ['sous', 'station', 'junior', 'trainee'].indexOf(task.chefRole);
+          if (ringIdx < 0 || sweepAng <= 0) return null;
+          const innerR = BASE_R + ringIdx * RING_W + 2;
+          const outerR = innerR + RING_W - 6;
           return (
             <path
               key={task.id}
-              d={pathData}
-              fill={taskSegmentColors[task.chefRole]}
-              opacity="0.9"
+              d={arcPath(innerR, outerR, startAng, sweepAng)}
+              fill={CHEF_COLORS[task.chefRole as keyof typeof CHEF_COLORS]}
+              opacity="0.88"
               className="cursor-pointer hover:opacity-100 transition-opacity"
-              onMouseEnter={(e) => {
+              onMouseEnter={e => {
                 setHoveredTask(task);
-                const rect = e.currentTarget.getBoundingClientRect();
-                setHoverPosition({
-                  x: rect.left + rect.width / 2,
-                  y: rect.top + rect.height / 2
-                });
+                const r = e.currentTarget.getBoundingClientRect();
+                setHoverPosition({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
               }}
               onMouseLeave={() => setHoveredTask(null)}
             />
           );
         })}
 
-        {/* Center circle with time */}
-        <circle cx={centerX} cy={centerY} r={baseRadius - 5} fill="white" stroke="#e5e7eb" strokeWidth="2" />
-        <text
-          x={centerX}
-          y={centerY}
-          textAnchor="middle"
-          dominantBaseline="middle"
-          className="text-2xl font-bold fill-[#4a1710]"
-        >
-          {clockMode === '1hour' ? `${focusHour}:45 AM` : getCurrentTime()}
+        {/* Center */}
+        <circle cx={CX} cy={CY} r={BASE_R - 5} fill="white" stroke="#e5e7eb" strokeWidth="2" />
+
+        {/* Focus label in center */}
+        <text x={CX} y={CY - 8} textAnchor="middle" dominantBaseline="middle" fontSize="13" fontWeight="700" fill="#374151">
+          {focusHour % 12 === 0 ? 12 : focusHour % 12}
+          {focusHour < 12 ? 'AM' : 'PM'}
         </text>
-        {clockMode === '1hour' && (
-          <text
-            x={centerX}
-            y={centerY + 25}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            className="text-xs font-semibold fill-gray-500"
-          >
-            45 MIN
-          </text>
-        )}
-      </svg>
+        <text x={CX} y={CY + 10} textAnchor="middle" dominantBaseline="middle" fontSize="9" fill="#9ca3af">
+          focus
+        </text>
+      </>
     );
   };
 
+  // ── Duration slider for 1h mode ─────────────────────────────────
+  const hourLabels = Array.from({ length: DAY_HOURS + 1 }, (_, i) => {
+    const h = DAY_START_HOUR + i;
+    return h < 12 ? `${h}AM` : h === 12 ? '12PM' : `${h - 12}PM`;
+  });
+
+  const sliderPercent = ((focusHour - DAY_START_HOUR) / (DAY_HOURS - 1)) * 100;
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-full py-12 bg-gradient-to-b from-white to-gray-50">
-      {/* Clock Mode Toggle */}
-      <div className="flex items-center gap-1 bg-gray-100 rounded-full p-1 mb-12">
+    <div className="flex flex-col items-center min-h-full py-8 bg-gradient-to-b from-white to-gray-50">
+
+      {/* ── Mode toggle ── */}
+      <div className="flex items-center gap-1 bg-gray-100 rounded-full p-1">
         <button
           onClick={() => setClockMode('1hour')}
           className={`px-6 py-2.5 text-sm font-semibold rounded-full transition-all ${
-            clockMode === '1hour'
-              ? 'bg-[#FE5D4D] text-white shadow-md'
-              : 'text-gray-600 hover:text-[#4a1710]'
+            clockMode === '1hour' ? 'bg-[#FE5D4D] text-white shadow-md' : 'text-gray-600 hover:text-[#4a1710]'
           }`}
         >
           1 HOUR VIEW
@@ -214,49 +267,111 @@ export function ClockView({ tasks }: ClockViewProps) {
         <button
           onClick={() => setClockMode('12hour')}
           className={`px-6 py-2.5 text-sm font-semibold rounded-full transition-all ${
-            clockMode === '12hour'
-              ? 'bg-[#FE5D4D] text-white shadow-md'
-              : 'text-gray-600 hover:text-[#4a1710]'
+            clockMode === '12hour' ? 'bg-[#FE5D4D] text-white shadow-md' : 'text-gray-600 hover:text-[#4a1710]'
           }`}
         >
           12 HOUR VIEW
         </button>
       </div>
 
-      {/* Clock Visualization */}
-      <div className="relative">
-        {renderClockFace()}
-        
-        {/* Hour focus selector for 1-hour view */}
-        {clockMode === '1hour' && (
-          <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 flex items-center gap-2">
-            <span className="text-xs text-gray-500 uppercase tracking-wider">
-              Focus Duration: 10 AM - 11 AM
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* Hour selector for 1-hour mode */}
+      {/* ── Duration slider (only in 1h mode) — shown directly below toggle ── */}
       {clockMode === '1hour' && (
-        <div className="flex items-center gap-2 mt-20">
-          {Array.from({ length: 7 }, (_, i) => i + 8).map((hour) => (
-            <button
-              key={hour}
-              onClick={() => setFocusHour(hour)}
-              className={`w-10 h-10 rounded-full text-sm font-semibold transition-all ${
-                focusHour === hour
-                  ? 'bg-[#FE5D4D] text-white'
-                  : 'bg-white text-gray-600 border border-gray-200 hover:border-[#FE5D4D]'
-              }`}
-            >
-              {hour}
-            </button>
-          ))}
+        <div className="w-full max-w-xl px-6 mt-5">
+          <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-bold text-gray-700 uppercase tracking-wide">Focus Hour</p>
+              <span className="text-sm font-bold text-[#FE5D4D]">
+                {hourLabels[focusHour - DAY_START_HOUR]} – {hourLabels[focusHour - DAY_START_HOUR + 1]}
+              </span>
+            </div>
+
+            {/* Slider track */}
+            <div className="relative pt-1 pb-3">
+              <div className="relative h-2 bg-gray-100 rounded-full">
+                {/* Filled portion */}
+                <div
+                  className="absolute h-2 bg-[#FE5D4D] rounded-full transition-all"
+                  style={{ width: `${sliderPercent}%` }}
+                />
+                <input
+                  ref={sliderRef}
+                  type="range"
+                  min={DAY_START_HOUR}
+                  max={DAY_END_HOUR - 1}
+                  value={focusHour}
+                  onChange={e => setFocusHour(Number(e.target.value))}
+                  className="absolute inset-0 w-full opacity-0 cursor-pointer h-2"
+                  style={{ margin: 0 }}
+                />
+                {/* Thumb */}
+                <div
+                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-5 h-5 bg-[#FE5D4D] rounded-full shadow-md border-2 border-white transition-all"
+                  style={{ left: `${sliderPercent}%` }}
+                />
+              </div>
+
+              {/* Hour labels below track */}
+              <div className="flex justify-between mt-2">
+                {['7AM', '9AM', '11AM', '1PM', '3PM', '5PM', '7PM'].map((label, i) => (
+                  <span key={label} className="text-[9px] text-gray-400 font-medium">{label}</span>
+                ))}
+              </div>
+            </div>
+
+            {/* Quick hour chips */}
+            <div className="flex flex-wrap gap-1.5 mt-1">
+              {Array.from({ length: DAY_HOURS }, (_, i) => DAY_START_HOUR + i).map(h => {
+                const label = h < 12 ? `${h}AM` : h === 12 ? '12PM' : `${h - 12}PM`;
+                const active = focusHour === h;
+                // Check if any task falls in this hour
+                const hasTasks = tasks.some(t => {
+                  const start = timeToMinutes(t.startTime);
+                  return start >= h * 60 && start < (h + 1) * 60;
+                });
+                return (
+                  <button
+                    key={h}
+                    onClick={() => setFocusHour(h)}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all relative ${
+                      active
+                        ? 'bg-[#FE5D4D] text-white shadow-sm'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    {label}
+                    {hasTasks && !active && (
+                      <span className="absolute -top-1 -right-1 w-2 h-2 bg-[#FE5D4D] rounded-full" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Hover Card */}
+      {/* ── Clock face ── */}
+      <div className="relative mt-6">
+        <svg width="600" height="600" viewBox="0 0 600 600" className="mx-auto">
+          <circle cx={CX} cy={CY} r={MAX_R + 20} fill="#fff8f7" opacity="0.3" />
+          <circle cx={CX} cy={CY} r={MAX_R} fill="white" opacity="0.6" />
+          {clockMode === '12hour' ? render12h() : render1h()}
+        </svg>
+      </div>
+
+      {/* ── Chef color legend ── */}
+      <div className="flex items-center gap-6 mt-4 flex-wrap justify-center px-4">
+        {Object.entries(CHEF_COLORS).map(([role, color]) => (
+          <div key={role} className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
+            <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+              {CHEF_LABELS[role]}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* Hover tooltip */}
       {hoveredTask && (
         <ClockTaskCard
           task={hoveredTask}

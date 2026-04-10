@@ -56,9 +56,14 @@ const dummyPairings: PairingItem[] = [
   { id: '36', name: 'Toast\nbread', angle: 278, distance: 200, color: '#737373', image: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400', duration: '10m', demand: 87, description: 'Sliced sandwich bread' },
 ];
 
-export function PairingView() {
+interface PairingViewProps {
+  dishName?: string;
+}
+
+export function PairingView({ dishName = 'Cheese Crispies' }: PairingViewProps) {
   const [showAIDrawer, setShowAIDrawer] = useState(false);
   const [hoveredItem, setHoveredItem] = useState<PairingItem | null>(null);
+  const [selectedItem, setSelectedItem] = useState<PairingItem | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   const centerX = 400;
@@ -76,12 +81,14 @@ export function PairingView() {
 
       {/* Header */}
       <CommonHeader
-        mainItem="Cheese Crispies"
+        mainItem={dishName}
         title="PAIRING EXPLORER • HOVER TO DISCOVER"
       />
 
       {/* Main Content */}
-      <div className="flex-1 relative overflow-hidden" onMouseMove={handleMouseMove}>
+      <div className="flex-1 flex overflow-hidden">
+        {/* Chart Area */}
+        <div className="flex-1 relative overflow-hidden" onMouseMove={handleMouseMove}>
         <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-white flex items-center justify-center">
           {/* Circular Grid */}
           <svg className="absolute inset-0 w-full h-full opacity-20">
@@ -138,6 +145,7 @@ export function PairingView() {
                 }}
                 onMouseEnter={() => setHoveredItem(item)}
                 onMouseLeave={() => setHoveredItem(null)}
+                onClick={() => setSelectedItem(prev => prev?.id === item.id ? null : item)}
               >
                 <div 
                   className="w-3 h-3 rounded-full cursor-pointer transition-all hover:scale-150"
@@ -155,13 +163,14 @@ export function PairingView() {
 
           {/* Center Main Item */}
           <div className="absolute" style={{ left: centerX, top: centerY, transform: 'translate(-50%, -50%)' }}>
-            <div 
+            <div
               className="rounded-full bg-gradient-to-br from-[#FFD700] to-[#FFA500] flex items-center justify-center shadow-2xl border-4 border-white"
               style={{ width: mainItemRadius * 2, height: mainItemRadius * 2 }}
             >
-              <div className="text-center">
-                <div className="text-2xl font-bold text-[#4a1710]">Cheese</div>
-                <div className="text-2xl font-bold text-[#4a1710]">Crispies</div>
+              <div className="text-center px-2">
+                {dishName.split(' ').map((word, i) => (
+                  <div key={i} className="text-lg font-bold text-[#4a1710] leading-tight">{word}</div>
+                ))}
               </div>
             </div>
           </div>
@@ -184,7 +193,7 @@ export function PairingView() {
                 <div className="p-4">
                   <h3 className="font-bold text-[#4a1710] mb-2">{hoveredItem.name.replace('\n', ' ')}</h3>
                   <p className="text-xs text-gray-600 mb-3">{hoveredItem.description}</p>
-                  
+
                   <div className="flex items-center gap-3 mb-2">
                     <div className="flex items-center gap-1.5 bg-white border border-gray-200 px-2.5 py-1 rounded-full">
                       <Clock className="size-3 text-[#FE5D4D]" />
@@ -200,6 +209,89 @@ export function PairingView() {
             </div>
           )}
         </div>
+        </div>
+
+        {/* RHS Details Panel — shown on click */}
+        {selectedItem && (
+          <div className="w-[300px] bg-white border-l border-gray-200 flex flex-col overflow-y-auto shadow-xl">
+            {/* Panel Header */}
+            <div className="flex items-center justify-between p-5 border-b border-gray-100">
+              <h3 className="text-sm font-bold text-[#4a1710] uppercase tracking-wide">Pairing Details</h3>
+              <button
+                onClick={() => setSelectedItem(null)}
+                className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors text-gray-500 text-xs font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Image */}
+            <img
+              src={selectedItem.image}
+              alt={selectedItem.name}
+              className="w-full h-40 object-cover"
+            />
+
+            {/* Details */}
+            <div className="p-5 space-y-4">
+              {/* Name */}
+              <div>
+                <div className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Item</div>
+                <div className="text-lg font-bold text-[#4a1710]">{selectedItem.name.replace(/\n/g, ' ')}</div>
+              </div>
+
+              {/* Description */}
+              <div>
+                <div className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Description</div>
+                <p className="text-sm text-gray-600">{selectedItem.description}</p>
+              </div>
+
+              {/* Key Stats Table */}
+              <div className="bg-gray-50 rounded-2xl overflow-hidden">
+                <div className="px-4 py-2 border-b border-gray-200">
+                  <div className="text-xs font-bold text-[#4a1710] uppercase tracking-wider">Chef Details</div>
+                </div>
+                <div className="divide-y divide-gray-100">
+                  <div className="flex items-center justify-between px-4 py-3">
+                    <span className="text-xs font-medium text-gray-500">Prep Time</span>
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="size-3 text-[#FE5D4D]" />
+                      <span className="text-xs font-bold text-[#4a1710]">{selectedItem.duration}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between px-4 py-3">
+                    <span className="text-xs font-medium text-gray-500">Demand Index</span>
+                    <span className="text-xs font-bold text-[#4a1710]">{selectedItem.demand}</span>
+                  </div>
+                  <div className="flex items-center justify-between px-4 py-3">
+                    <span className="text-xs font-medium text-gray-500">Pairing Score</span>
+                    <div className="flex items-center gap-1">
+                      {[1,2,3,4,5].map(s => (
+                        <div key={s} className={`w-2 h-2 rounded-full ${s <= Math.ceil(selectedItem.demand / 20) ? 'bg-[#FE5D4D]' : 'bg-gray-200'}`} />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between px-4 py-3">
+                    <span className="text-xs font-medium text-gray-500">Flavor Profile</span>
+                    <span className="text-xs font-bold text-[#4a1710]">
+                      {selectedItem.demand > 90 ? 'Signature' : selectedItem.demand > 80 ? 'Bold' : selectedItem.demand > 70 ? 'Subtle' : 'Delicate'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between px-4 py-3">
+                    <span className="text-xs font-medium text-gray-500">Pairs with</span>
+                    <span className="text-xs font-bold text-[#4a1710]">{dishName}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Color Indicator */}
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 rounded-full border-2 border-white shadow-sm" style={{ backgroundColor: selectedItem.color }} />
+                <span className="text-xs text-gray-500">Node color on pairing map</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

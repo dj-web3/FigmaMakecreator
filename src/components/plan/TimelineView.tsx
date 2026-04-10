@@ -20,10 +20,17 @@ const timeSlots = [
 ];
 
 const taskColors: Record<ChefRole, string> = {
-  sous: 'bg-[#c8e6c9]',
-  station: 'bg-[#fff9c4]',
-  junior: 'bg-[#ffd6d1]',
-  trainee: 'bg-[#e1bee7]'
+  sous: 'bg-[#dcfce7] border-[#22c55e]/30',
+  station: 'bg-[#fef3c7] border-[#f59e0b]/30',
+  junior: 'bg-[#fee2e2] border-[#ef4444]/30',
+  trainee: 'bg-[#f3e8ff] border-[#a855f7]/30'
+};
+
+const taskDotColors: Record<ChefRole, string> = {
+  sous: '#22c55e',
+  station: '#f59e0b',
+  junior: '#ef4444',
+  trainee: '#a855f7'
 };
 
 export function TimelineView({ tasks }: TimelineViewProps) {
@@ -92,8 +99,8 @@ export function TimelineView({ tasks }: TimelineViewProps) {
                   {/* Chef Role Label */}
                   <div className="w-48 flex-shrink-0 pr-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-                        <User className="size-5 text-gray-400" />
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: taskDotColors[role.id] + '33' }}>
+                        <User className="size-5" style={{ color: taskDotColors[role.id] }} />
                       </div>
                       <div>
                         <div className="text-sm font-semibold text-[#4a1710]">
@@ -130,8 +137,11 @@ export function TimelineView({ tasks }: TimelineViewProps) {
                         onMouseEnter={(e) => handleTaskHover(task, e)}
                         onMouseLeave={() => setHoveredTask(null)}
                       >
-                        <div className="text-xs font-semibold text-[#4a1710] truncate">
-                          {task.title}
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: taskDotColors[role.id] }} />
+                          <div className="text-xs font-semibold text-[#4a1710] truncate">
+                            {task.title}
+                          </div>
                         </div>
                         <div className="text-xs text-gray-600 mt-0.5">
                           {task.duration} MIN

@@ -25,7 +25,7 @@ export function DiscoveryView() {
       name: 'BUTTER CHICKEN',
       prepWindow: 45,
       unitMargin: 12.0,
-      demand: 98,
+      demand: 142,
       riskScore: 14
     },
     {
@@ -33,7 +33,7 @@ export function DiscoveryView() {
       name: 'NAAN',
       prepWindow: 120,
       unitMargin: 1.5,
-      demand: 96,
+      demand: 138,
       riskScore: 16
     },
     {
@@ -49,7 +49,7 @@ export function DiscoveryView() {
       name: 'GULAB JAMUN',
       prepWindow: 40,
       unitMargin: 3.0,
-      demand: 94,
+      demand: 117,
       riskScore: 45
     },
     {
@@ -57,7 +57,7 @@ export function DiscoveryView() {
       name: 'CHICKEN TIKKA',
       prepWindow: 240,
       unitMargin: 18.0,
-      demand: 88,
+      demand: 89,
       riskScore: 44
     },
     {
@@ -65,7 +65,7 @@ export function DiscoveryView() {
       name: 'VEG KOLHAPURI',
       prepWindow: 25,
       unitMargin: 8.0,
-      demand: 78,
+      demand: 64,
       riskScore: 77
     }
   ];

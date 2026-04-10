@@ -102,17 +102,9 @@ export function MenuItemsTable({ items }: MenuItemsTableProps) {
 
               {/* Demand */}
               <div className="flex items-center justify-center">
-                <div className="flex flex-col items-start gap-1 w-full max-w-[120px]">
-                  <span className="text-xs font-semibold text-[#4a1710]">
-                    {item.demand}%
-                  </span>
-                  <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-[#FE5D4D] to-[#ff8577] rounded-full transition-all duration-500"
-                      style={{ width: `${item.demand}%` }}
-                    />
-                  </div>
-                </div>
+                <span className="text-base font-semibold text-[#4a1710]">
+                  {item.demand}
+                </span>
               </div>
 
               {/* Risk Score */}
