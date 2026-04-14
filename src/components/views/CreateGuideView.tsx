@@ -6,6 +6,7 @@ import { AIChatDrawer } from '../AIChatDrawer';
 import { CommonHeader } from '../CommonHeader';
 import { RMINTFab } from '../RMINTFab';
 import { useState, useRef } from 'react';
+import type { SharedDishData } from '../../App';
 
 const videoClips = [
   {
@@ -167,13 +168,19 @@ const chefCategories = [
   "Station Chef"
 ];
 
-export function CreateGuideView() {
+interface CreateGuideViewProps {
+  sharedDish?: SharedDishData;
+}
+
+export function CreateGuideView({ sharedDish }: CreateGuideViewProps) {
   const [selectedVideos, setSelectedVideos] = useState<number[]>([]);
   const [showAssignMenu, setShowAssignMenu] = useState(false);
   const [showAIDrawer, setShowAIDrawer] = useState(false);
   const [videoTitles, setVideoTitles] = useState<Record<number, string>>({});
   const [stepAssignments, setStepAssignments] = useState<Record<string, string>>({});
   const videoRefs = useRef<Record<number, HTMLDivElement | null>>({});
+
+  const videos = sharedDish?.guideSteps ?? videoClips;
 
   const handleVideoSelect = (id: number, checked: boolean) => {
     if (checked) {
@@ -209,12 +216,7 @@ export function CreateGuideView() {
     return videoTitles[video.id] || video.title;
   };
 
-  const handleAssignChef = (chef: string) => {
-    const updatedVideos = videoClips.map(video => 
-      selectedVideos.includes(video.id) 
-        ? { ...video, assignedTo: chef }
-        : video
-    );
+  const handleAssignChef = (_chef: string) => {
     setSelectedVideos([]);
     setShowAssignMenu(false);
   };
@@ -227,16 +229,16 @@ export function CreateGuideView() {
 
       {/* Top Header - Full Width */}
       <CommonHeader
-        mainItem="Chicken Biryani"
-        title="A step-by-step guide to the best rice dish ever"
+        mainItem={sharedDish?.dishName ?? 'Chicken Biryani'}
+        title={sharedDish?.subtitle ?? 'A step-by-step guide to the best rice dish ever'}
       />
 
       {/* Content Area with Sidebar */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left Sidebar - Numbered Video List */}
-        <VideoSidebar 
-          videos={videoClips} 
-          onVideoClick={handleScrollToVideo} 
+        <VideoSidebar
+          videos={videos}
+          onVideoClick={handleScrollToVideo}
           stepAssignments={stepAssignments}
         />
 
@@ -280,7 +282,7 @@ export function CreateGuideView() {
           <div className="flex-1 overflow-y-auto">
             <div className="max-w-[1400px] mx-auto p-6">
               <div className="space-y-4">
-                {videoClips.map((video) => (
+                {videos.map((video) => (
                   <div key={video.id} className="flex gap-4">
                     <div className="flex-1">
                       <VideoCard 

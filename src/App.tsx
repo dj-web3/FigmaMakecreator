@@ -5,6 +5,8 @@ import { CreateMenuView } from "./components/views/CreateMenuView";
 import { CreatePlanView } from "./components/views/CreatePlanView";
 import { DiscoveryView } from "./components/views/DiscoveryView";
 import { PairingView } from "./components/views/PairingView";
+import { DISH_DB, getDishKey } from "./data/dishData";
+import type { GuideStep, DiscoveryMenuItem, DishPairing } from "./data/dishData";
 
 type NavigationSection =
   | "create-guide"
@@ -24,71 +26,109 @@ export interface SharedMethodologyStep {
 
 export interface SharedDishData {
   dishName: string;
+  subtitle: string;
   methodology: SharedMethodologyStep[];
+  guideSteps: GuideStep[];
+  discoveryItems: DiscoveryMenuItem[];
+  pairings: DishPairing[];
 }
+
+// Re-export dish data types for views to consume
+export type { GuideStep, DiscoveryMenuItem, DishPairing };
 
 const defaultMethodology: SharedMethodologyStep[] = [
   {
     id: '1',
-    title: 'Chicken Prep',
+    title: 'Chicken Marination',
     duration: '45m',
-    quantity: '0.6KG',
-    substeps: [
-      { label: 'A', text: 'Boneless Thighs' },
-      { label: 'B', text: 'First Marination' }
-    ],
-    chefs: ['SOUS']
+    quantity: '0.8kg',
+    substeps: [{ label: 'A', text: 'Chicken Marination' }],
+    chefs: ['SOUS'],
   },
   {
     id: '2',
-    title: 'Gravy Production',
-    duration: '90m',
-    quantity: '0.5L',
-    substeps: [
-      { label: 'A', text: 'Makhani Gravy' }
-    ],
-    chefs: ['STATION']
+    title: 'Rice Parboil',
+    duration: '20m',
+    quantity: '1kg',
+    substeps: [{ label: 'A', text: 'Rice Parboil' }],
+    chefs: ['JUNIOR'],
   },
   {
     id: '3',
-    title: 'Service Finish',
-    duration: '45m',
-    quantity: '0.4KG',
-    substeps: [
-      { label: 'A', text: 'Final Assembly' }
-    ],
-    chefs: ['SOUS']
-  }
+    title: 'Spice Layer Prep',
+    duration: '15m',
+    quantity: '200g',
+    substeps: [{ label: 'A', text: 'Spice Layer Prep' }],
+    chefs: ['STATION'],
+  },
+  {
+    id: '4',
+    title: 'Dum Assembly',
+    duration: '60m',
+    quantity: '2kg',
+    substeps: [{ label: 'A', text: 'Dum Assembly' }],
+    chefs: ['SOUS', 'STATION'],
+  },
 ];
+
+function buildSharedDish(key: string, methodology: SharedMethodologyStep[]): SharedDishData {
+  const record = DISH_DB[key] ?? DISH_DB['biryani'];
+  return {
+    dishName: record.dishName,
+    subtitle: record.subtitle,
+    methodology,
+    guideSteps: record.guideSteps,
+    discoveryItems: record.discoveryItems,
+    pairings: record.pairings,
+  };
+}
 
 export default function App() {
   const [activeSection, setActiveSection] =
-    useState<NavigationSection>("create-guide");
+    useState<NavigationSection>("create-menu");
 
-  const [sharedDish, setSharedDish] = useState<SharedDishData>({
-    dishName: 'Chicken Biryani',
-    methodology: defaultMethodology,
-  });
+  const [sharedDish, setSharedDish] = useState<SharedDishData>(
+    buildSharedDish('biryani', defaultMethodology)
+  );
+
+  // When CreateMenuView emits new dish data, enrich with full DB lookup
+  const handleDishChange = (partial: SharedDishData) => {
+    const key = getDishKey(partial.dishName) ?? 'biryani';
+    const record = DISH_DB[key] ?? DISH_DB['biryani'];
+    setSharedDish({
+      dishName: partial.dishName,
+      subtitle: record.subtitle,
+      methodology: partial.methodology,
+      guideSteps: record.guideSteps,
+      discoveryItems: record.discoveryItems,
+      pairings: record.pairings,
+    });
+  };
 
   const renderView = () => {
     switch (activeSection) {
-      case "create-guide":
-        return <CreateGuideView />;
       case "create-menu":
         return (
           <CreateMenuView
             sharedDish={sharedDish}
-            onSharedDishChange={setSharedDish}
+            onSharedDishChange={handleDishChange}
           />
         );
+      case "create-guide":
+        return <CreateGuideView sharedDish={sharedDish} />;
       case "create-plan":
         return <CreatePlanView sharedDish={sharedDish} />;
       case "discovery":
-        return <DiscoveryView />;
+        return <DiscoveryView sharedDish={sharedDish} />;
       case "pairing":
-        return <PairingView dishName={sharedDish.dishName} />;
+        return <PairingView sharedDish={sharedDish} />;
       default:
-        return <CreateGuideView />;
+        return (
+          <CreateMenuView
+            sharedDish={sharedDish}
+            onSharedDishChange={handleDishChange}
+          />
+        );
     }
   };
 

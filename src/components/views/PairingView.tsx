@@ -4,6 +4,7 @@ import { AIChatDrawer } from '../AIChatDrawer';
 import { RMINTFab } from '../RMINTFab';
 import { Clock, TrendingUp } from 'lucide-react';
 import pairingImage from 'figma:asset/61d3f99ce062bf11be1fae54f8f003b99dd7f143.png';
+import type { SharedDishData } from '../../App';
 
 interface PairingItem {
   id: string;
@@ -57,10 +58,14 @@ const dummyPairings: PairingItem[] = [
 ];
 
 interface PairingViewProps {
+  sharedDish?: SharedDishData;
   dishName?: string;
 }
 
-export function PairingView({ dishName = 'Cheese Crispies' }: PairingViewProps) {
+export function PairingView({ sharedDish, dishName }: PairingViewProps) {
+  const activeDishName = sharedDish?.dishName ?? dishName ?? 'Recipe';
+  const pairings = sharedDish?.pairings?.length ? sharedDish.pairings : dummyPairings;
+
   const [showAIDrawer, setShowAIDrawer] = useState(false);
   const [hoveredItem, setHoveredItem] = useState<PairingItem | null>(null);
   const [selectedItem, setSelectedItem] = useState<PairingItem | null>(null);
@@ -81,7 +86,7 @@ export function PairingView({ dishName = 'Cheese Crispies' }: PairingViewProps) 
 
       {/* Header */}
       <CommonHeader
-        mainItem={dishName}
+        mainItem={activeDishName}
         title="PAIRING EXPLORER • HOVER TO DISCOVER"
       />
 
@@ -108,7 +113,7 @@ export function PairingView({ dishName = 'Cheese Crispies' }: PairingViewProps) 
 
           {/* Connection Lines */}
           <svg className="absolute inset-0 w-full h-full">
-            {dummyPairings.map((item) => {
+            {pairings.map((item) => {
               const radians = (item.angle * Math.PI) / 180;
               const x = centerX + Math.cos(radians) * item.distance;
               const y = centerY + Math.sin(radians) * item.distance;
@@ -129,7 +134,7 @@ export function PairingView({ dishName = 'Cheese Crispies' }: PairingViewProps) 
           </svg>
 
           {/* Pairing Items */}
-          {dummyPairings.map((item) => {
+          {pairings.map((item) => {
             const radians = (item.angle * Math.PI) / 180;
             const x = centerX + Math.cos(radians) * item.distance;
             const y = centerY + Math.sin(radians) * item.distance;
@@ -168,7 +173,7 @@ export function PairingView({ dishName = 'Cheese Crispies' }: PairingViewProps) 
               style={{ width: mainItemRadius * 2, height: mainItemRadius * 2 }}
             >
               <div className="text-center px-2">
-                {dishName.split(' ').map((word, i) => (
+                {activeDishName.split(' ').map((word, i) => (
                   <div key={i} className="text-lg font-bold text-[#4a1710] leading-tight">{word}</div>
                 ))}
               </div>

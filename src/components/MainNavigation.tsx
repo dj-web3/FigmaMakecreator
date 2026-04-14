@@ -9,8 +9,8 @@ interface MainNavigationProps {
 }
 
 const navigationItems = [
-  { id: 'create-guide' as const, icon: BookOpen, label: 'Create Guide' },
   { id: 'create-menu' as const, icon: MenuIcon, label: 'Create Menu' },
+  { id: 'create-guide' as const, icon: BookOpen, label: 'Create Guide' },
   { id: 'create-plan' as const, icon: Calendar, label: 'Create Plan' },
   { id: 'discovery' as const, icon: Compass, label: 'Discovery' },
   { id: 'pairing' as const, icon: Wine, label: 'Pairing' },

@@ -5,6 +5,7 @@ import { MenuItemsTable } from '../discovery/MenuItemsTable';
 import { AIChatDrawer } from '../AIChatDrawer';
 import { CommonHeader } from '../CommonHeader';
 import { RMINTFab } from '../RMINTFab';
+import type { SharedDishData } from '../../App';
 
 export interface MenuItem {
   id: string;
@@ -15,60 +16,24 @@ export interface MenuItem {
   riskScore: number;
 }
 
-export function DiscoveryView() {
+interface DiscoveryViewProps {
+  sharedDish?: SharedDishData;
+}
+
+export function DiscoveryView({ sharedDish }: DiscoveryViewProps) {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [showAIDrawer, setShowAIDrawer] = useState(false);
 
-  const menuItems: MenuItem[] = [
-    {
-      id: '1',
-      name: 'BUTTER CHICKEN',
-      prepWindow: 45,
-      unitMargin: 12.0,
-      demand: 142,
-      riskScore: 14
-    },
-    {
-      id: '2',
-      name: 'NAAN',
-      prepWindow: 120,
-      unitMargin: 1.5,
-      demand: 138,
-      riskScore: 16
-    },
-    {
-      id: '3',
-      name: 'LASSI',
-      prepWindow: 15,
-      unitMargin: 4.0,
-      demand: 91,
-      riskScore: 52
-    },
-    {
-      id: '4',
-      name: 'GULAB JAMUN',
-      prepWindow: 40,
-      unitMargin: 3.0,
-      demand: 117,
-      riskScore: 45
-    },
-    {
-      id: '5',
-      name: 'CHICKEN TIKKA',
-      prepWindow: 240,
-      unitMargin: 18.0,
-      demand: 89,
-      riskScore: 44
-    },
-    {
-      id: '6',
-      name: 'VEG KOLHAPURI',
-      prepWindow: 25,
-      unitMargin: 8.0,
-      demand: 64,
-      riskScore: 77
-    }
-  ];
+  const menuItems: MenuItem[] = sharedDish?.discoveryItems?.length
+    ? sharedDish.discoveryItems
+    : [
+        { id: '1', name: 'BUTTER CHICKEN', prepWindow: 45,  unitMargin: 12.0, demand: 142, riskScore: 14 },
+        { id: '2', name: 'NAAN',           prepWindow: 120, unitMargin: 1.5,  demand: 138, riskScore: 16 },
+        { id: '3', name: 'LASSI',          prepWindow: 15,  unitMargin: 4.0,  demand: 91,  riskScore: 52 },
+        { id: '4', name: 'GULAB JAMUN',    prepWindow: 40,  unitMargin: 3.0,  demand: 117, riskScore: 45 },
+        { id: '5', name: 'CHICKEN TIKKA',  prepWindow: 240, unitMargin: 18.0, demand: 89,  riskScore: 44 },
+        { id: '6', name: 'VEG KOLHAPURI',  prepWindow: 25,  unitMargin: 8.0,  demand: 64,  riskScore: 77 },
+      ];
 
   // Carousel data - Butter Chicken is always the main dish
   const [carouselSlides, setCarouselSlides] = useState([
@@ -106,8 +71,8 @@ export function DiscoveryView() {
       <AIChatDrawer isOpen={showAIDrawer} onClose={() => setShowAIDrawer(false)} />
       
       {/* Header - consistent with Create Guide */}
-      <CommonHeader 
-        mainItem="Chicken Biryani"
+      <CommonHeader
+        mainItem={sharedDish?.dishName ?? 'Chicken Biryani'}
         title="Neural Lattice Intelligence Matrix - Discovery"
       />
 
