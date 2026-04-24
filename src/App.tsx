@@ -105,32 +105,11 @@ export default function App() {
     });
   };
 
-  const renderView = () => {
-    switch (activeSection) {
-      case "create-menu":
-        return (
-          <CreateMenuView
-            sharedDish={sharedDish}
-            onSharedDishChange={handleDishChange}
-          />
-        );
-      case "create-guide":
-        return <CreateGuideView sharedDish={sharedDish} />;
-      case "create-plan":
-        return <CreatePlanView sharedDish={sharedDish} />;
-      case "discovery":
-        return <DiscoveryView sharedDish={sharedDish} />;
-      case "pairing":
-        return <PairingView sharedDish={sharedDish} />;
-      default:
-        return (
-          <CreateMenuView
-            sharedDish={sharedDish}
-            onSharedDishChange={handleDishChange}
-          />
-        );
-    }
-  };
+  // Keep all views permanently mounted so local state (e.g. flowNodes in
+  // CreateMenuView) is never discarded when the user switches tabs.
+  // Each wrapper is shown/hidden via CSS only — React never unmounts them.
+  const show = (section: NavigationSection) =>
+    activeSection === section ? 'flex flex-col flex-1 h-full min-h-0' : 'hidden';
 
   return (
     <div className="flex h-screen bg-white overflow-hidden">
@@ -138,8 +117,25 @@ export default function App() {
         activeSection={activeSection}
         onSectionChange={setActiveSection}
       />
-      <div className="flex-1 overflow-hidden">
-        {renderView()}
+      <div className="flex-1 overflow-hidden flex flex-col">
+        <div className={show('create-menu')}>
+          <CreateMenuView
+            sharedDish={sharedDish}
+            onSharedDishChange={handleDishChange}
+          />
+        </div>
+        <div className={show('create-guide')}>
+          <CreateGuideView sharedDish={sharedDish} />
+        </div>
+        <div className={show('create-plan')}>
+          <CreatePlanView sharedDish={sharedDish} />
+        </div>
+        <div className={show('discovery')}>
+          <DiscoveryView sharedDish={sharedDish} />
+        </div>
+        <div className={show('pairing')}>
+          <PairingView sharedDish={sharedDish} />
+        </div>
       </div>
     </div>
   );

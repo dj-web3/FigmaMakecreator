@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { CommonHeader } from '../CommonHeader';
 import { AIChatDrawer } from '../AIChatDrawer';
 import { RMINTFab } from '../RMINTFab';
@@ -816,6 +816,13 @@ export function CreateMenuView({ sharedDish, onSharedDishChange }: CreateMenuVie
   const syncToShared = useCallback((nodes: FlowNode[], conns: FlowConnection[], dishName: string) => {
     onSharedDishChange({ dishName, methodology: deriveMethodologyFromNodes(nodes, conns) });
   }, [onSharedDishChange]);
+
+  // Push the initial canvas state to sharedDish once on mount so all other
+  // views (Create Guide, Create Plan) immediately see the correct chef data.
+  useEffect(() => {
+    syncToShared(flowNodes, connections, sharedDish.dishName);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* ── Live derived methodology (never stored separately) ── */
   const methodology = deriveMethodologyFromNodes(flowNodes, connections);
