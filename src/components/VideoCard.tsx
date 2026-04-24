@@ -1,6 +1,6 @@
-import { Play, Plus, ChevronDown, Clock, ChefHat, Thermometer, Sparkles, Flame, CookingPot } from 'lucide-react';
+import { Play, Clock, ChefHat, Thermometer, Sparkles, Flame, CookingPot } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { forwardRef, useState, useRef, useEffect } from 'react';
+import { forwardRef, useState } from 'react';
 
 interface Ingredient {
   name: string;
@@ -27,6 +27,7 @@ interface VideoCardProps {
   onScroll: (id: number) => void;
   onStepAssign?: (videoId: number, stepIndex: number, chef: string) => void;
   stepAssignments?: Record<string, string>;
+  readOnly?: boolean;
 }
 
 const chefCategories = [
@@ -173,35 +174,11 @@ function isImportantStep(stepText: string, stepIndex: number, totalSteps: number
 }
 
 export const VideoCard = forwardRef<HTMLDivElement, VideoCardProps>(
-  ({ video, isSelected, onSelect, onRename, onStepAssign, stepAssignments }, ref) => {
+  ({ video, isSelected, onSelect, onRename, onStepAssign, stepAssignments, readOnly = false }, ref) => {
     const [isEditingTitle, setIsEditingTitle] = useState(false);
     const [editedTitle, setEditedTitle] = useState(video.title);
-    const [showAssignMenu, setShowAssignMenu] = useState(false);
-    const [activeStepDropdown, setActiveStepDropdown] = useState<number | null>(null);
-    const assignRef = useRef<HTMLDivElement>(null);
-    const stepAssignRefs = useRef<Record<number, HTMLDivElement | null>>({});
-    
+
     const steps = parseSteps(video.description);
-
-    // Close dropdown when clicking outside
-    useEffect(() => {
-      const handleClickOutside = (event: MouseEvent) => {
-        if (assignRef.current && !assignRef.current.contains(event.target as Node)) {
-          setShowAssignMenu(false);
-        }
-        
-        // Close step dropdowns
-        const clickedOutsideAllSteps = Object.values(stepAssignRefs.current).every(
-          ref => !ref || !ref.contains(event.target as Node)
-        );
-        if (clickedOutsideAllSteps) {
-          setActiveStepDropdown(null);
-        }
-      };
-
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
 
     const handleTitleSave = () => {
       if (editedTitle.trim() && editedTitle !== video.title) {
@@ -254,9 +231,9 @@ export const VideoCard = forwardRef<HTMLDivElement, VideoCardProps>(
 
             {/* Content */}
             <div className="flex-1 min-w-0">
-              {/* Editable Title */}
+              {/* Title — editable in Create Menu, read-only in Create Guide */}
               <div className="flex items-start gap-2 mb-2">
-                {isEditingTitle ? (
+                {!readOnly && isEditingTitle ? (
                   <input
                     type="text"
                     value={editedTitle}
@@ -267,9 +244,9 @@ export const VideoCard = forwardRef<HTMLDivElement, VideoCardProps>(
                     autoFocus
                   />
                 ) : (
-                  <h3 
-                    className="editable-title text-base font-medium text-gray-900 cursor-text hover:bg-gray-50 px-2 py-1 rounded transition-colors"
-                    onClick={() => setIsEditingTitle(true)}
+                  <h3
+                    className={`text-base font-medium text-gray-900 px-2 py-1 rounded transition-colors ${!readOnly ? 'editable-title cursor-text hover:bg-gray-50' : 'select-text'}`}
+                    onClick={() => { if (!readOnly) setIsEditingTitle(true); }}
                   >
                     <span className="text-gray-500">#{video.id}</span>
                     <span className="ml-2">{editedTitle}</span>
@@ -348,20 +325,6 @@ export const VideoCard = forwardRef<HTMLDivElement, VideoCardProps>(
               )}
             </div>
 
-            {/* Checkbox */}
-            <div className="flex-shrink-0">
-              <label className="flex items-center cursor-pointer">
-                <input 
-                  type="checkbox"
-                  checked={isSelected}
-                  onChange={(e) => onSelect(video.id, e.target.checked)}
-                  className="size-4 rounded border-gray-300 text-[#FE5D4D] focus:ring-[#FE5D4D] cursor-pointer"
-                  style={{
-                    accentColor: '#FE5D4D'
-                  }}
-                />
-              </label>
-            </div>
           </div>
 
           {/* Method Section - Full Width */}
@@ -457,36 +420,6 @@ export const VideoCard = forwardRef<HTMLDivElement, VideoCardProps>(
                             </div>
                           )}
                           
-                          {/* Assign Button for Step */}
-                          <div className="relative" ref={el => stepAssignRefs.current[idx] = el}>
-                            <button
-                              onClick={() => setActiveStepDropdown(activeStepDropdown === idx ? null : idx)}
-                              className="inline-flex items-center gap-1 bg-white border border-gray-300 hover:border-[#FE5D4D] hover:bg-[#FFF8F7] rounded-full px-2 py-1 transition-colors"
-                            >
-                              <Plus className="size-3 text-gray-600" />
-                              <span className="text-[10px] text-gray-600 font-medium">
-                                {assignedChef ? 'Reassign' : 'Assign'}
-                              </span>
-                            </button>
-                            
-                            {/* Step Assignment Dropdown */}
-                            {activeStepDropdown === idx && (
-                              <div className="absolute left-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[140px] z-20">
-                                {chefCategories.map((category) => (
-                                  <button
-                                    key={category}
-                                    onClick={() => {
-                                      onStepAssign?.(video.id, idx, category);
-                                      setActiveStepDropdown(null);
-                                    }}
-                                    className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
-                                  >
-                                    {category}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
                         </div>
                       </div>
                     </div>
@@ -496,37 +429,6 @@ export const VideoCard = forwardRef<HTMLDivElement, VideoCardProps>(
             </div>
           </div>
 
-          {/* Assign Button with Dropdown */}
-          <div className="flex items-center gap-3">
-            <div className="relative" ref={assignRef}>
-              <button 
-                onClick={() => setShowAssignMenu(!showAssignMenu)}
-                className="bg-[#FE5D4D] hover:bg-[#e54d3d] text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors"
-              >
-                <Plus className="size-4" />
-                <span>Assign</span>
-                <ChevronDown className="size-4" />
-              </button>
-
-              {/* Dropdown Menu */}
-              {showAssignMenu && (
-                <div className="absolute left-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[160px] z-10">
-                  {chefCategories.map((category) => (
-                    <button
-                      key={category}
-                      onClick={() => {
-                        // Handle assignment logic here
-                        setShowAssignMenu(false);
-                      }}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                    >
-                      {category}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
         </div>
       </div>
     );

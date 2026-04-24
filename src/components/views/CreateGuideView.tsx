@@ -1,4 +1,4 @@
-import { ArrowLeft, Search, MoreVertical, HelpCircle, ChevronDown, Plus, Sparkles } from 'lucide-react';
+import { ArrowLeft, Search, MoreVertical, HelpCircle, Sparkles } from 'lucide-react';
 import { VideoSidebar } from '../VideoSidebar';
 import { VideoCard } from '../VideoCard';
 import { VideoActions } from '../VideoActions';
@@ -161,64 +161,49 @@ const videoClips = [
   }
 ];
 
-const chefCategories = [
-  "Sous Chef",
-  "Trainee Chef",
-  "Junior Chef",
-  "Station Chef"
-];
-
 interface CreateGuideViewProps {
   sharedDish?: SharedDishData;
 }
 
 export function CreateGuideView({ sharedDish }: CreateGuideViewProps) {
-  const [selectedVideos, setSelectedVideos] = useState<number[]>([]);
-  const [showAssignMenu, setShowAssignMenu] = useState(false);
   const [showAIDrawer, setShowAIDrawer] = useState(false);
-  const [videoTitles, setVideoTitles] = useState<Record<number, string>>({});
-  const [stepAssignments, setStepAssignments] = useState<Record<string, string>>({});
   const videoRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
-  const videos = sharedDish?.guideSteps ?? videoClips;
+  // Merge DB guide steps with live methodology data from Create Menu.
+  // methodology[i] carries the current title, chefs, and duration set by the user.
+  const baseVideos = sharedDish?.guideSteps ?? videoClips;
+  const videos = baseVideos.map((video, i) => {
+    const step = sharedDish?.methodology?.[i];
+    return {
+      ...video,
+      // Title: use what the user typed in Create Menu, fall back to DB title
+      title: step?.title || video.title,
+      // Chef: use the first assigned chef from Create Menu
+      assignedTo: step?.chefs?.[0] ?? video.assignedTo ?? null,
+      // Duration: use value from Create Menu if set
+      duration: step?.duration || video.duration,
+    };
+  });
 
-  const handleVideoSelect = (id: number, checked: boolean) => {
-    if (checked) {
-      setSelectedVideos([...selectedVideos, id]);
-    } else {
-      setSelectedVideos(selectedVideos.filter(vid => vid !== id));
-    }
-  };
+  // Build stepAssignments from methodology so chef pills show on sub-steps too.
+  // Key format matches VideoCard: `${videoId}-${stepIndex}`.
+  const stepAssignments: Record<string, string> = {};
+  if (sharedDish?.methodology) {
+    sharedDish.methodology.forEach((step, videoIdx) => {
+      const videoId = baseVideos[videoIdx]?.id;
+      if (videoId == null) return;
+      if (step.chefs?.[0]) {
+        // Assign the chef to step 0 of this video card (the first sub-step)
+        stepAssignments[`${videoId}-0`] = step.chefs[0];
+      }
+    });
+  }
 
   const handleScrollToVideo = (id: number) => {
     const videoElement = videoRefs.current[id];
     if (videoElement) {
       videoElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-  };
-
-  const handleRenameVideo = (id: number, newTitle: string) => {
-    setVideoTitles(prev => ({
-      ...prev,
-      [id]: newTitle
-    }));
-  };
-
-  const handleStepAssign = (videoId: number, stepIndex: number, chef: string) => {
-    const stepKey = `${videoId}-${stepIndex}`;
-    setStepAssignments(prev => ({
-      ...prev,
-      [stepKey]: chef
-    }));
-  };
-
-  const getVideoTitle = (video: any) => {
-    return videoTitles[video.id] || video.title;
-  };
-
-  const handleAssignChef = (_chef: string) => {
-    setSelectedVideos([]);
-    setShowAssignMenu(false);
   };
 
   return (
@@ -244,40 +229,6 @@ export function CreateGuideView({ sharedDish }: CreateGuideViewProps) {
 
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Filter Bar */}
-          <div className="h-12 border-b border-gray-200 flex items-center justify-end px-6 bg-white">
-            <div className="flex items-center gap-4 text-sm">
-              <div className="relative">
-                <button 
-                  onClick={() => setShowAssignMenu(!showAssignMenu)}
-                  disabled={selectedVideos.length === 0}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors ${
-                    selectedVideos.length > 0 
-                      ? 'bg-[#FE5D4D] text-white hover:bg-[#e54d3d]' 
-                      : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  }`}
-                >
-                  <span>Assign to</span>
-                  <ChevronDown className="size-4" />
-                </button>
-                
-                {showAssignMenu && selectedVideos.length > 0 && (
-                  <div className="absolute top-full mt-1 right-0 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-10 min-w-[160px]">
-                    {chefCategories.map((chef) => (
-                      <button
-                        key={chef}
-                        onClick={() => handleAssignChef(chef)}
-                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-gray-700"
-                      >
-                        {chef}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
           {/* Video Cards Container */}
           <div className="flex-1 overflow-y-auto">
             <div className="max-w-[1400px] mx-auto p-6">
@@ -285,27 +236,18 @@ export function CreateGuideView({ sharedDish }: CreateGuideViewProps) {
                 {videos.map((video) => (
                   <div key={video.id} className="flex gap-4">
                     <div className="flex-1">
-                      <VideoCard 
+                      <VideoCard
                         video={video}
-                        isSelected={selectedVideos.includes(video.id)}
-                        onSelect={handleVideoSelect}
-                        onRename={handleRenameVideo}
+                        isSelected={false}
+                        onSelect={() => {}}
+                        onRename={() => {}}
+                        readOnly={true}
                         onScroll={handleScrollToVideo}
-                        onStepAssign={handleStepAssign}
                         stepAssignments={stepAssignments}
                         ref={el => videoRefs.current[video.id] = el}
                       />
                     </div>
-                    <VideoActions 
-                      videoId={video.id}
-                      onRenameClick={() => {
-                        const cardElement = videoRefs.current[video.id];
-                        if (cardElement) {
-                          const titleElement = cardElement.querySelector('.editable-title') as HTMLElement;
-                          titleElement?.click();
-                        }
-                      }}
-                    />
+                    <VideoActions videoId={video.id} />
                   </div>
                 ))}
               </div>

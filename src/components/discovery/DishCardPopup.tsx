@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { TrendingUp, ArrowRight, X } from 'lucide-react';
 import { MenuItem } from '../views/DiscoveryView';
@@ -11,6 +11,10 @@ interface DishCardPopupProps {
   position: { x: number; y: number; width: number; height: number; zIndex: number };
   colorClass: string;
   slideIndex: number;
+  // Lifted state: parent controls which card's menu is open
+  cardId: string;
+  isOpen: boolean;
+  onToggle: (id: string | null) => void;
 }
 
 export function DishCardPopup({
@@ -21,8 +25,10 @@ export function DishCardPopup({
   position,
   colorClass,
   slideIndex,
+  cardId,
+  isOpen,
+  onToggle,
 }: DishCardPopupProps) {
-  const [showMenu, setShowMenu] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
   // Filter out the current dish
@@ -30,12 +36,12 @@ export function DishCardPopup({
 
   const handleDishSelect = (newDish: MenuItem) => {
     onDishChange(newDish);
-    setShowMenu(false);
+    onToggle(null);
   };
 
   const handleCardClick = () => {
     if (!isMain) {
-      setShowMenu(!showMenu);
+      onToggle(isOpen ? null : cardId);
     }
   };
 
@@ -73,7 +79,7 @@ export function DishCardPopup({
           top: 0,
           width: position.width,
           height: position.height,
-          zIndex: showMenu ? 1000 : position.zIndex,
+          zIndex: isOpen ? 1000 : position.zIndex,
         }}
       >
         <motion.div
@@ -105,15 +111,15 @@ export function DishCardPopup({
 
         {/* Premium Popup Menu - positioned relative to the card */}
         <AnimatePresence>
-          {showMenu && !isMain && (
+          {isOpen && !isMain && (
             <>
-              {/* Backdrop */}
+              {/* Backdrop — closes only THIS card's menu */}
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 className="fixed inset-0 bg-black/10 backdrop-blur-[2px] z-[9998]"
-                onClick={() => setShowMenu(false)}
+                onClick={() => onToggle(null)}
                 style={{ left: 0, top: 0 }}
               />
               
@@ -146,7 +152,7 @@ export function DishCardPopup({
                     </p>
                   </div>
                   <button
-                    onClick={() => setShowMenu(false)}
+                    onClick={() => onToggle(null)}
                     className="w-6 h-6 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors"
                   >
                     <X className="size-3.5 text-gray-500" />

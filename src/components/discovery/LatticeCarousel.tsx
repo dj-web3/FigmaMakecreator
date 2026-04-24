@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { DishCardPopup } from './DishCardPopup';
@@ -32,15 +33,17 @@ const getColorForDish = (dishName: string) => {
   return dishColors[1];
 };
 
-export function LatticeCarousel({ 
-  currentSlide, 
-  slides, 
-  allDishes, 
+export function LatticeCarousel({
+  currentSlide,
+  slides,
+  allDishes,
   onSlideUpdate,
   onPrevSlide,
-  onNextSlide 
+  onNextSlide
 }: LatticeCarouselProps) {
   const slide = slides[currentSlide];
+  // Lifted open-card state — only one card's menu can be open at a time
+  const [openCardId, setOpenCardId] = useState<string | null>(null);
 
   // Position configurations - properly fitting within 800x360 container with overlaps
   // Container padding is 24px (p-6), so usable space is ~752x312
@@ -57,11 +60,16 @@ export function LatticeCarousel({
   const handleDishChange = (index: number, newDish: MenuItem) => {
     const updatedOtherDishes = [...slide.otherDishes];
     updatedOtherDishes[index] = newDish;
-    
     onSlideUpdate(currentSlide, {
       mainDish: slide.mainDish,
       otherDishes: updatedOtherDishes
     });
+  };
+
+  const handleSlideChange = (direction: 'prev' | 'next') => {
+    setOpenCardId(null); // close any open menu when navigating
+    if (direction === 'prev') onPrevSlide();
+    else onNextSlide();
   };
 
   return (
@@ -78,12 +86,12 @@ export function LatticeCarousel({
         {/* Carousel controls */}
         <div className="flex items-center gap-2">
           <button
-            onClick={onPrevSlide}
+            onClick={() => handleSlideChange('prev')}
             className="w-8 h-8 rounded-lg border border-gray-300 flex items-center justify-center hover:border-[#FE5D4D] hover:bg-[#fff8f7] transition-all"
           >
             <ChevronLeft className="size-4 text-gray-600" />
           </button>
-          
+
           {/* Slide indicators */}
           <div className="flex items-center gap-1.5 px-2">
             {slides.map((_, index) => (
@@ -97,9 +105,9 @@ export function LatticeCarousel({
               />
             ))}
           </div>
-          
+
           <button
-            onClick={onNextSlide}
+            onClick={() => handleSlideChange('next')}
             className="w-8 h-8 rounded-lg border border-gray-300 flex items-center justify-center hover:border-[#FE5D4D] hover:bg-[#fff8f7] transition-all"
           >
             <ChevronRight className="size-4 text-gray-600" />
@@ -119,18 +127,24 @@ export function LatticeCarousel({
             className="absolute inset-0"
           >
             {/* Other dishes with popup */}
-            {slide.otherDishes.map((dish, index) => (
-              <DishCardPopup
-                key={`${currentSlide}-${dish.id}-${index}`}
-                dish={dish}
-                isMain={false}
-                allDishes={allDishes}
-                onDishChange={(newDish) => handleDishChange(index, newDish)}
-                position={positions[index]}
-                colorClass={getColorForDish(dish.name)}
-                slideIndex={currentSlide}
-              />
-            ))}
+            {slide.otherDishes.map((dish, index) => {
+              const cardId = `${currentSlide}-${dish.id}-${index}`;
+              return (
+                <DishCardPopup
+                  key={cardId}
+                  dish={dish}
+                  isMain={false}
+                  allDishes={allDishes}
+                  onDishChange={(newDish) => handleDishChange(index, newDish)}
+                  position={positions[index]}
+                  colorClass={getColorForDish(dish.name)}
+                  slideIndex={currentSlide}
+                  cardId={cardId}
+                  isOpen={openCardId === cardId}
+                  onToggle={setOpenCardId}
+                />
+              );
+            })}
 
             {/* Main dish (Butter Chicken) - overlaps with others */}
             <DishCardPopup
@@ -142,6 +156,9 @@ export function LatticeCarousel({
               position={mainDishPosition}
               colorClass={getColorForDish(slide.mainDish.name)}
               slideIndex={currentSlide}
+              cardId={`${currentSlide}-main`}
+              isOpen={false}
+              onToggle={setOpenCardId}
             />
           </motion.div>
         </AnimatePresence>
