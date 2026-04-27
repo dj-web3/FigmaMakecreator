@@ -7,14 +7,6 @@ interface Ingredient {
   image: string;
 }
 
-// Chef role color map for all-chef pills
-const CHEF_PILL_COLORS: Record<string, string> = {
-  SOUS:    'bg-green-100 text-green-700 border border-green-300',
-  STATION: 'bg-amber-100 text-amber-700 border border-amber-300',
-  JUNIOR:  'bg-red-100 text-red-700 border border-red-300',
-  TRAINEE: 'bg-purple-100 text-purple-700 border border-purple-300',
-};
-
 interface VideoCardProps {
   video: {
     id: number;
@@ -24,9 +16,6 @@ interface VideoCardProps {
     thumbnail: string;
     resolution: string;
     assignedTo: string | null;
-    allChefs?: string[];
-    process?: string;
-    startTime?: string;
     ingredients: {
       major: Ingredient[];
       minor: Ingredient[];
@@ -265,45 +254,19 @@ export const VideoCard = forwardRef<HTMLDivElement, VideoCardProps>(
                 )}
               </div>
 
-              {/* Duration, Start Time, Process, and Chef Pills */}
-              <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+              {/* Duration Pill and Chef Assignment */}
+              <div className="flex items-center gap-2 mb-3">
                 {/* Duration Pill */}
                 <div className="inline-block bg-gray-100 text-gray-700 text-xs px-3 py-1 rounded-full font-medium">
                   {video.duration}
                 </div>
 
-                {/* Start Time Pill */}
-                {video.startTime && (
-                  <div className="inline-flex items-center gap-1 bg-gray-50 border border-gray-200 text-gray-600 text-xs px-2.5 py-1 rounded-full font-medium">
-                    <Clock className="size-3 text-gray-400" />
-                    {video.startTime}
-                  </div>
-                )}
-
-                {/* Process Badge */}
-                {video.process && (
-                  <div className="inline-block bg-[#FFF0EE] text-[#4A1710] text-xs px-2.5 py-1 rounded-full font-medium border border-[#FE5D4D]/20">
-                    {video.process}
-                  </div>
-                )}
-
-                {/* All Chef Pills (from Create Menu) */}
-                {video.allChefs && video.allChefs.length > 0 ? (
-                  video.allChefs.map(chef => (
-                    <div
-                      key={chef}
-                      className={`inline-block text-xs px-2.5 py-1 rounded-full font-medium ${
-                        CHEF_PILL_COLORS[chef] ?? 'bg-gray-100 text-gray-700 border border-gray-200'
-                      }`}
-                    >
-                      {chef.charAt(0) + chef.slice(1).toLowerCase()}
-                    </div>
-                  ))
-                ) : video.assignedTo ? (
+                {/* Chef Assignment Pill */}
+                {video.assignedTo && (
                   <div className="inline-block bg-[#FFE6E3] text-[#4A1710] text-xs px-3 py-1 rounded-full font-medium">
                     {video.assignedTo}
                   </div>
-                ) : null}
+                )}
               </div>
 
               {/* Ingredients Section - In Grey Boxes */}

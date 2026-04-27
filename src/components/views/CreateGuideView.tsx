@@ -178,16 +178,10 @@ export function CreateGuideView({ sharedDish }: CreateGuideViewProps) {
       ...video,
       // Title: use what the user typed in Create Menu, fall back to DB title
       title: step?.title || video.title,
-      // Chef: use the first assigned chef from Create Menu (legacy single field)
+      // Chef: use the first assigned chef from Create Menu
       assignedTo: step?.chefs?.[0] ?? video.assignedTo ?? null,
-      // All chefs from Create Menu
-      allChefs: step?.chefs ?? [],
       // Duration: use value from Create Menu if set
       duration: step?.duration || video.duration,
-      // Start time from Create Menu
-      startTime: step?.startTime ?? '',
-      // Process label from Create Menu
-      process: step?.process ?? '',
     };
   });
 

@@ -16,8 +16,6 @@ export interface Task {
   duration: number; // in minutes
   chefRole: ChefRole;
   session: ChefRole[];
-  process?: string;
-  ingredients?: { id: string; name: string; quantity: string; image: string }[];
 }
 
 interface CreatePlanViewProps {
@@ -36,6 +34,8 @@ const parseDuration = (dur: string): number => {
   return match ? parseInt(match[1]) : 60;
 };
 
+const startTimes = ['07:00', '08:00', '09:30', '11:00', '12:00', '14:00'];
+
 export function CreatePlanView({ sharedDish }: CreatePlanViewProps) {
   const [viewMode, setViewMode] = useState<'timeline' | 'clock'>('timeline');
   const [showAIDrawer, setShowAIDrawer] = useState(false);
@@ -45,12 +45,10 @@ export function CreatePlanView({ sharedDish }: CreatePlanViewProps) {
     step.chefs.map((chef, j) => ({
       id: `method-${step.id}-${j}`,
       title: step.title,
-      startTime: step.startTime || '09:00',
+      startTime: startTimes[i % startTimes.length],
       duration: parseDuration(step.duration),
       chefRole: chefRoleMap[chef] || 'sous',
       session: [chefRoleMap[chef] || 'sous'],
-      process: step.process,
-      ingredients: step.ingredients,
     }))
   ) || [];
 
@@ -192,7 +190,7 @@ export function CreatePlanView({ sharedDish }: CreatePlanViewProps) {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden bg-[#fff8f7]">
+      <div className="flex-1 overflow-auto bg-[#fff8f7]">
         {viewMode === 'timeline' ? (
           <TimelineView tasks={tasks} />
         ) : (
