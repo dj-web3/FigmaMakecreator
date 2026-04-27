@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { Clock, Users, X } from 'lucide-react';
+import { Clock, Users, X, Tag, Package } from 'lucide-react';
 import { Task } from '../views/CreatePlanView';
 
 interface TaskDetailsPopupProps {
@@ -114,6 +114,39 @@ export function TaskDetailsPopup({ task, position }: TaskDetailsPopupProps) {
             ))}
           </div>
         </div>
+
+        {/* Process */}
+        {task.process && (
+          <div className="flex items-center gap-2">
+            <Tag className="size-4 text-gray-500" />
+            <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mr-1">Process</p>
+            <span className="px-2.5 py-1 rounded-lg text-[10px] font-semibold bg-[#FFF0EE] text-[#4a1710] border border-[#FE5D4D]/20">
+              {task.process}
+            </span>
+          </div>
+        )}
+
+        {/* Ingredients */}
+        {task.ingredients && task.ingredients.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Package className="size-4 text-gray-500" />
+              <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">
+                Ingredients
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {task.ingredients.map((ing) => (
+                <span
+                  key={ing.id}
+                  className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-700 border border-gray-200"
+                >
+                  {ing.name} {ing.quantity && <span className="text-gray-400">· {ing.quantity}</span>}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </motion.div>
   );

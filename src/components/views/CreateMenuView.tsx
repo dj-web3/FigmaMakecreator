@@ -23,10 +23,12 @@ interface FlowNode {
   title: string;
   quantity: string;
   duration: string;
+  startTime?: string;
   process: string;
   chefs: string[];
   image: string;
   position: { x: number; y: number };
+  ingredients?: Ingredient[];
 }
 
 interface FlowConnection {
@@ -665,9 +667,12 @@ function deriveMethodologyFromNodes(
       id: String(idx++),
       title: group.length === 1 ? group[0].title : node.process,
       duration: `${totalDur}m`,
+      startTime: group[0].startTime ?? '09:00',
       quantity: group[group.length - 1].quantity,
+      process: node.process,
       substeps: group.map((n, i) => ({ label: String.fromCharCode(65 + i), text: n.title })),
       chefs: uniqueChefs,
+      ingredients: group.flatMap(n => n.ingredients ?? []),
       processType: node.process,
     });
   }
@@ -911,10 +916,12 @@ export function CreateMenuView({ sharedDish, onSharedDishChange }: CreateMenuVie
       title: toTitleCase(ing.name),
       quantity: ing.quantity,
       duration: '30m',
+      startTime: '09:00',
       process: 'Marinating',
       chefs: ['Sous'],
       image: ing.image,
       position,
+      ingredients: [],
     };
     const next = [...flowNodes, newNode];
     setFlowNodes(next);
@@ -963,10 +970,12 @@ export function CreateMenuView({ sharedDish, onSharedDishChange }: CreateMenuVie
         ? `${selNodes.reduce((s, n) => s + (parseFloat(n.quantity) || 0), 0).toFixed(1)}kg`
         : '0.5kg',
       duration: '30m',
+      startTime: '09:00',
       process: 'Combining',
       chefs: ['Sous'],
       image: getImageForTerm(title),
       position,
+      ingredients: [],
     };
 
     // Prompt text becomes the connection method label
@@ -1403,7 +1412,7 @@ export function CreateMenuView({ sharedDish, onSharedDishChange }: CreateMenuVie
                   </div>
                 </div>
 
-                {/* Fix #13 — editable qty & duration in RHS; uses step.processType for back-sync */}
+                {/* Editable duration, start time, qty in RHS */}
                 <div className="flex gap-2 pl-8">
                   <div className="flex-1 flex items-center gap-1 bg-white border border-gray-200 rounded-lg px-1.5 py-1">
                     <Clock className="size-2.5 text-gray-400 shrink-0" />
@@ -1412,6 +1421,7 @@ export function CreateMenuView({ sharedDish, onSharedDishChange }: CreateMenuVie
                       value={step.duration}
                       onChange={e => updateStepInNodes(step.processType, { duration: e.target.value })}
                       className="w-full text-[10px] text-gray-700 bg-transparent focus:outline-none"
+                      placeholder="dur"
                     />
                   </div>
                   <div className="flex-1 flex items-center gap-1 bg-white border border-gray-200 rounded-lg px-1.5 py-1">
@@ -1421,6 +1431,21 @@ export function CreateMenuView({ sharedDish, onSharedDishChange }: CreateMenuVie
                       value={step.quantity}
                       onChange={e => updateStepInNodes(step.processType, { quantity: e.target.value })}
                       className="w-full text-[10px] text-gray-700 bg-transparent focus:outline-none"
+                      placeholder="qty"
+                    />
+                  </div>
+                </div>
+                {/* Start time field */}
+                <div className="pl-8">
+                  <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg px-1.5 py-1">
+                    <Clock className="size-2.5 text-[#FE5D4D] shrink-0" />
+                    <span className="text-[9px] text-gray-400 shrink-0">Start</span>
+                    <input
+                      type="text"
+                      value={step.startTime || '09:00'}
+                      onChange={e => updateStepInNodes(step.processType, { startTime: e.target.value })}
+                      className="w-full text-[10px] text-gray-700 bg-transparent focus:outline-none"
+                      placeholder="09:00"
                     />
                   </div>
                 </div>

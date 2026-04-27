@@ -19,9 +19,12 @@ export interface SharedMethodologyStep {
   id: string;
   title: string;
   duration: string;
+  startTime: string;
   quantity: string;
+  process: string;
   substeps: { label: string; text: string }[];
   chefs: ('SOUS' | 'STATION' | 'TRAINEE' | 'JUNIOR')[];
+  ingredients: { id: string; name: string; quantity: string; image: string }[];
 }
 
 export interface SharedDishData {
@@ -41,33 +44,45 @@ const defaultMethodology: SharedMethodologyStep[] = [
     id: '1',
     title: 'Chicken Marination',
     duration: '45m',
+    startTime: '07:00',
     quantity: '0.8kg',
+    process: 'Marinating',
     substeps: [{ label: 'A', text: 'Chicken Marination' }],
     chefs: ['SOUS'],
+    ingredients: [],
   },
   {
     id: '2',
     title: 'Rice Parboil',
     duration: '20m',
+    startTime: '08:00',
     quantity: '1kg',
+    process: 'Boiling',
     substeps: [{ label: 'A', text: 'Rice Parboil' }],
     chefs: ['JUNIOR'],
+    ingredients: [],
   },
   {
     id: '3',
     title: 'Spice Layer Prep',
     duration: '15m',
+    startTime: '09:00',
     quantity: '200g',
+    process: 'Sautéing',
     substeps: [{ label: 'A', text: 'Spice Layer Prep' }],
     chefs: ['STATION'],
+    ingredients: [],
   },
   {
     id: '4',
     title: 'Dum Assembly',
     duration: '60m',
+    startTime: '09:30',
     quantity: '2kg',
+    process: 'Combining',
     substeps: [{ label: 'A', text: 'Dum Assembly' }],
     chefs: ['SOUS', 'STATION'],
+    ingredients: [],
   },
 ];
 
